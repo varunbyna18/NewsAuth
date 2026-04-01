@@ -1,0 +1,26 @@
+# iisnode configuration
+
+# Uncomment the logging line to enable logging of iisnode to a file
+#loggingEnabled=true
+
+# Uncomment and modify the following lines to customize the behavior of iisnode
+
+# nodeProcessCommandLine tells iisnode the script to execute to start the node process
+# the default is "node.exe"
+#nodeProcessCommandLine="%programfiles%\nodejs\node.exe"
+
+# appInstance tells iisnode how many application instances of each iisnode process to create
+# the default value is 1
+appInstances=1
+
+# recycleSignalEnabled tells iisnode to recycle the node process when an iisnode-specific file is modified
+# the default is true
+recycleSignalEnabled=true
+
+# node_env is the environment variable that node.js development frameworks such as express.js use to determine if the
+# application is running in production or development mode. the default value is "production"
+node_env=production
+
+# enableXFF tells iisnode to use the X-Forwarded-For header to determine the client ip address
+# the default value is false
+enableXFF=true
