@@ -27,6 +27,38 @@ export default function AnalysisResult({ data, loading }: AnalysisResultProps) {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
+  // Defensive data validation and normalization
+  const getSafeData = () => {
+    if (!data) return null
+    
+    // Normalize sentiment
+    let sentiment = data.sentiment
+    let sentimentScore = 0.5
+    let sentimentLabel = 'neutral'
+    
+    if (sentiment && typeof sentiment === 'object' && sentiment.score !== undefined) {
+      sentimentScore = Math.max(0, Math.min(1, Number(sentiment.score) || 0.5))
+      sentimentLabel = sentiment.label || 'neutral'
+    } else if (typeof sentiment === 'number') {
+      sentimentScore = Math.max(0, Math.min(1, sentiment))
+      sentimentLabel = sentimentScore > 0.6 ? 'positive' : sentimentScore > 0.3 ? 'neutral' : 'negative'
+    }
+
+    // Normalize credibility score
+    let credibilityScore = Number(data.credibilityScore) || 50
+    credibilityScore = Math.max(0, Math.min(100, credibilityScore))
+
+    return {
+      sentiment: { score: sentimentScore, label: sentimentLabel },
+      credibilityScore: credibilityScore,
+      keyPhrases: Array.isArray(data.keyPhrases) ? data.keyPhrases : [],
+      ipfsHash: String(data.ipfsHash || ''),
+      transactionHash: String(data.transactionHash || '')
+    }
+  }
+
+  const safeData = getSafeData()
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center p-20 glass-card rounded-[3rem] border-white/5 relative overflow-hidden">
@@ -43,7 +75,7 @@ export default function AnalysisResult({ data, loading }: AnalysisResultProps) {
     )
   }
 
-  if (!data) return null
+  if (!data || !safeData) return null
 
   const getSentimentColor = (score: number) => {
     if (score < 0.3) return 'text-red-400 bg-red-400/10 border-red-400/20'
@@ -57,7 +89,7 @@ export default function AnalysisResult({ data, loading }: AnalysisResultProps) {
     return { label: 'High Credibility', color: 'text-green-500 bg-green-500/10' }
   }
 
-  const isSimulated = data.ipfsHash.includes('Simulated') || data.transactionHash.startsWith('0x00000')
+  const isSimulated = safeData.ipfsHash.includes('Simulated') || safeData.transactionHash.startsWith('0x00000')
 
   return (
     <div className="space-y-10 relative">
@@ -82,13 +114,13 @@ export default function AnalysisResult({ data, loading }: AnalysisResultProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Sentiment Display */}
         <div className="glass-card rounded-[2.5rem] p-8 border-white/5 relative overflow-hidden group hover:border-blue-500/20 transition-all duration-500">
-           <div className={`absolute top-0 right-0 w-32 h-32 blur-[60px] opacity-20 -z-10 group-hover:opacity-40 transition-opacity ${data.sentiment.score < 0.3 ? 'bg-red-500' : data.sentiment.score < 0.6 ? 'bg-yellow-500' : 'bg-green-500'}`} />
+           <div className={`absolute top-0 right-0 w-32 h-32 blur-[60px] opacity-20 -z-10 group-hover:opacity-40 transition-opacity ${safeData.sentiment.score < 0.3 ? 'bg-red-500' : safeData.sentiment.score < 0.6 ? 'bg-yellow-500' : 'bg-green-500'}`} />
            <div className="flex justify-between items-start mb-10">
               <div>
                 <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-1">Sentiment Pulse</h3>
-                <p className="text-3xl font-black text-white tracking-tight">{data.sentiment.label}</p>
+                <p className="text-3xl font-black text-white tracking-tight">{safeData.sentiment.label}</p>
               </div>
-              <div className={`p-4 rounded-2xl border ${getSentimentColor(data.sentiment.score)}`}>
+              <div className={`p-4 rounded-2xl border ${getSentimentColor(safeData.sentiment.score)}`}>
                  <ShieldCheck className="w-7 h-7" />
               </div>
            </div>
@@ -96,14 +128,14 @@ export default function AnalysisResult({ data, loading }: AnalysisResultProps) {
            <div className="space-y-4">
               <div className="flex justify-between items-end mb-2">
                 <span className="text-sm font-bold text-slate-400">Analysis Confidence</span>
-                <span className="text-2xl font-black text-white">{(data.sentiment.score * 100).toFixed(0)}%</span>
+                <span className="text-2xl font-black text-white">{(safeData.sentiment.score * 100).toFixed(0)}%</span>
               </div>
               <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden border border-white/5">
                  <motion.div 
                     initial={{ width: 0 }}
-                    animate={{ width: `${data.sentiment.score * 100}%` }}
+                    animate={{ width: `${safeData.sentiment.score * 100}%` }}
                     transition={{ duration: 1.5, type: "spring" }}
-                    className={`h-full ${data.sentiment.score < 0.3 ? 'bg-red-500' : data.sentiment.score < 0.6 ? 'bg-yellow-500' : 'bg-green-500'} shadow-[0_0_15px_rgba(34,197,94,0.3)]`}
+                    className={`h-full ${safeData.sentiment.score < 0.3 ? 'bg-red-500' : safeData.sentiment.score < 0.6 ? 'bg-yellow-500' : 'bg-green-500'} shadow-[0_0_15px_rgba(34,197,94,0.3)]`}
                  />
               </div>
            </div>
@@ -115,10 +147,10 @@ export default function AnalysisResult({ data, loading }: AnalysisResultProps) {
            <div className="flex justify-between items-start mb-8">
               <div>
                 <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-1">Credibility Index</h3>
-                <div className={`inline-block px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest mb-2 ${getCredibilityStatus(data.credibilityScore).color}`}>
-                   {getCredibilityStatus(data.credibilityScore).label}
+                <div className={`inline-block px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest mb-2 ${getCredibilityStatus(safeData.credibilityScore).color}`}>
+                   {getCredibilityStatus(safeData.credibilityScore).label}
                 </div>
-                <p className="text-5xl font-black text-white tracking-tighter">{data.credibilityScore.toFixed(0)}<span className="text-2xl text-slate-500">%</span></p>
+                <p className="text-5xl font-black text-white tracking-tighter">{safeData.credibilityScore.toFixed(0)}<span className="text-2xl text-slate-500">%</span></p>
               </div>
               <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
                  <Fingerprint className="w-7 h-7" />
@@ -126,7 +158,7 @@ export default function AnalysisResult({ data, loading }: AnalysisResultProps) {
            </div>
 
            <div className="flex flex-wrap gap-2 pt-4">
-              {data.keyPhrases.slice(0, 5).map((phrase, i) => (
+              {safeData.keyPhrases.slice(0, 5).map((phrase, i) => (
                 <span key={i} className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-slate-300 hover:bg-white/10 transition-colors">
                   #{phrase}
                 </span>
@@ -148,7 +180,7 @@ export default function AnalysisResult({ data, loading }: AnalysisResultProps) {
             {!isSimulated && (
               <motion.a 
                 whileHover={{ scale: 1.02 }}
-                href={`https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`}
+                href={`https://gateway.pinata.cloud/ipfs/${safeData.ipfsHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-white font-black text-sm transition-all shadow-xl"
@@ -171,11 +203,11 @@ export default function AnalysisResult({ data, loading }: AnalysisResultProps) {
                   <div className="space-y-1">
                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">IPFS Resource Hash (CID)</span>
                      <p className="text-sm md:text-md text-emerald-400 font-mono break-all line-clamp-2 md:line-clamp-none leading-relaxed">
-                        {data.ipfsHash}
+                        {safeData.ipfsHash}
                      </p>
                   </div>
                   <button 
-                    onClick={() => handleCopy(data.ipfsHash, 'ipfs')}
+                    onClick={() => handleCopy(safeData.ipfsHash, 'ipfs')}
                     className="shrink-0 flex items-center justify-center p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full transition-all group/btn"
                   >
                     {copiedId === 'ipfs' ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5 text-slate-400 group-hover/btn:text-white" />}
@@ -189,19 +221,19 @@ export default function AnalysisResult({ data, loading }: AnalysisResultProps) {
                   <div className="space-y-1">
                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Blockchain Transaction Proof</span>
                      <p className="text-sm md:text-md text-indigo-400 font-mono break-all line-clamp-2 md:line-clamp-none leading-relaxed">
-                        {data.transactionHash}
+                        {safeData.transactionHash}
                      </p>
                   </div>
                   <div className="flex gap-2">
                     <button 
-                       onClick={() => handleCopy(data.transactionHash, 'tx')}
+                       onClick={() => handleCopy(safeData.transactionHash, 'tx')}
                        className="flex items-center justify-center p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full transition-all group/btn"
                     >
                        {copiedId === 'tx' ? <CheckCircle2 className="w-5 h-5 text-indigo-500" /> : <Copy className="w-5 h-5 text-slate-400 group-hover/btn:text-white" />}
                     </button>
                     {!isSimulated && (
                        <a 
-                          href={`https://sepolia.etherscan.io/tx/${data.transactionHash}`}
+                          href={`https://sepolia.etherscan.io/tx/${safeData.transactionHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center justify-center p-4 bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-500/30 rounded-full transition-all text-indigo-400"
