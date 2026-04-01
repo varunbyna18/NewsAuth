@@ -50,32 +50,41 @@ function analyzeContent(content) {
   const hasAttribution = /according to|said|stated|announced|reported/i.test(content);
   const hasSource = /source|verified|official|confirmed/i.test(content);
 
-  // Calculate credibility (0-1)
-  let credibility = 0.5;
-  if (hasAttribution) credibility += 0.15;
-  if (hasSource) credibility += 0.15;
-  if (hasNumbers) credibility += 0.1;
-  if (hasQuotes) credibility += 0.1;
-  credibility = Math.min(credibility, 0.95);
+  // Calculate credibility (0-1, then convert to 0-100 for display as percentage)
+  let credibilityScore = 0.5;
+  if (hasAttribution) credibilityScore += 0.15;
+  if (hasSource) credibilityScore += 0.15;
+  if (hasNumbers) credibilityScore += 0.1;
+  if (hasQuotes) credibilityScore += 0.1;
+  credibilityScore = Math.min(credibilityScore, 0.95);
 
   // Calculate sentiment (0-1)
-  const positiveWords = (content.match(/good|great|excellent|positive|success|benefit|rose|increased/gi) || []).length;
-  const negativeWords = (content.match(/bad|terrible|negative|risk|danger|failure|threat/gi) || []).length;
-  const sentiment = 0.5 + (positiveWords - negativeWords) * 0.05;
+  const positiveWords = (content.match(/good|great|excellent|positive|success|benefit|rose|increased|up/gi) || []).length;
+  const negativeWords = (content.match(/bad|terrible|negative|risk|danger|failure|threat|down|fell/gi) || []).length;
+  let sentimentScore = 0.5 + (positiveWords - negativeWords) * 0.05;
+  sentimentScore = Math.max(0.1, Math.min(0.9, sentimentScore));
+
+  // Determine sentiment label
+  let sentimentLabel = 'Neutral';
+  if (sentimentScore < 0.33) sentimentLabel = 'Negative';
+  else if (sentimentScore > 0.66) sentimentLabel = 'Positive';
 
   const result = {
-    sentiment: Math.max(0.1, Math.min(0.9, sentiment)),
+    sentiment: {
+      score: sentimentScore,
+      label: sentimentLabel
+    },
     keyPhrases: keywords.length > 0 ? keywords : ['analysis', 'content'],
-    credibilityScore: credibility,
+    credibilityScore: Math.round(credibilityScore * 100), // Convert to percentage (0-100)
     ipfsHash: `QmNews${Date.now()}`,
     transactionHash: `0x${Math.random().toString(16).slice(2)}`,
     blockNumber: Math.floor(Math.random() * 1000000),
     ipfsUrl: `https://ipfs.io/ipfs/QmNews${Date.now()}`,
     blockchainLink: `https://sepolia.etherscan.io/tx/0x${Math.random().toString(16).slice(2)}`,
-    warnings: credibility < 0.6 ? ["Low credibility - Please verify with official sources"] : []
+    warnings: credibilityScore < 0.6 ? ["Low credibility - Please verify with official sources"] : []
   };
 
-  console.log('✅ [ANALYZE] Result ready - credibility:', credibility);
+  console.log('✅ [ANALYZE] Result ready - credibility:', result.credibilityScore, '% sentiment:', sentimentLabel);
   return result;
 }
 
