@@ -43,8 +43,7 @@ jobs:
             server.js
             package.json
             package-lock.json
-            web.config
-            iisnode.yml
+            startup.sh
 
   deploy:
     runs-on: ubuntu-latest
@@ -73,3 +72,17 @@ jobs:
           app-name: 'newsauth-frontend'
           slot-name: 'Production'
           package: .
+
+      - name: Configure startup for Linux App Service
+        run: |
+          echo "Configuring Linux App Service startup..."
+          az webapp config appsettings set \
+            --resource-group newsauth-rg \
+            --name newsauth-frontend \
+            --settings NODE_ENV=production PORT=8080
+          
+          az webapp config set \
+            --resource-group newsauth-rg \
+            --name newsauth-frontend \
+            --startup-file "startup.sh"
+        continue-on-error: true
