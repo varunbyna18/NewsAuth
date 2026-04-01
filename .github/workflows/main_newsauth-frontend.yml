@@ -2,12 +2,11 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
 name: Build and deploy Node.js app to Azure Web App - newsauth-frontend
-# DISABLED: Using Azure Static Web Apps (frontend-deploy.yml) instead
-# Static Web Apps is better suited for React SPAs
 
 on:
-  # schedule:
-  #   - cron: '0 0 * * *'  # Disabled
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -63,15 +62,6 @@ jobs:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_B210100CF0564FC8930E97540E32EC3D }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F3A61B1A4E984436931D1628E60AAA8F }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_FCC9C3228BBD4BB3B32FC7D441DC336E }}
-
-      - name: Create App Service if not exists
-        run: |
-          az webapp list --resource-group newsauth-rg --query "[0].name" -o tsv > /tmp/app_exists.txt
-          if [ ! -s /tmp/app_exists.txt ]; then
-            echo "Creating App Service..."
-            az appservice plan create --name newsauth-frontend-plan --resource-group newsauth-rg --sku B1 --is-linux || true
-            az webapp create --resource-group newsauth-rg --plan newsauth-frontend-plan --name newsauth-frontend --runtime "NODE|20-lts" || true
-          fi
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
