@@ -2,11 +2,12 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
 name: Build and deploy Node.js app to Azure Web App - newsauth-frontend
+# DISABLED: Using Azure Static Web Apps (frontend-deploy.yml) instead
+# Static Web Apps is better suited for React SPAs
 
 on:
-  push:
-    branches:
-      - main
+  # schedule:
+  #   - cron: '0 0 * * *'  # Disabled
   workflow_dispatch:
 
 jobs:
